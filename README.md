@@ -15,3 +15,5 @@ Some different features that this framework has:
 * In addition, there will also be a max_existing_positions parameter to ensure our margins, since trading forex, coins and gold involve a very high margins (1:100 or even 1:2000). This mechanism will be updated with the calculation of margin, free margin to better mimic real profit,
 
 * The outputs of the backtest class including dataframes with positions (df_result) and balances (df_balance), which can be used for in-sample optimization. 
+
+There are seperate repo contains only the backtest classes and functions [here](https://github.com/AnhTNguyenBlank/Trading_backtest_framework). This repo will be the main working space for me and will be updated.
