@@ -67,7 +67,7 @@ class RSI_strat(Base_Alpha):
         '''Strategy for RSI, calculates the signal based on the RSI value.'''
         if row['RSI'] < self.RSI_param['CUTOFF_BUY']:
             return pd.Series([1, self.base_SL, self.base_TP], index=['SIGNAL', 'SL', 'TP']) # Buy signal
-        elif row['RSI'] > self.RSI_param['CUTOFF_BUY']:
+        elif row['RSI'] > self.RSI_param['CUTOFF_SELL']:
             return pd.Series([-1, self.base_SL, self.base_TP], index=['SIGNAL', 'SL', 'TP']) # Sell signal
         else:
             return pd.Series([0, 0, 0], index=['SIGNAL', 'SL', 'TP']) # No action (neutral)
