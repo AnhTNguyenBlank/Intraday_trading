@@ -460,16 +460,21 @@ class positions_sender:
         
         if sl is None:
             sl = price - mt.symbol_info(self.symbol).point * direction_multiplier * self.ref_loss * profit_multiplier / self.volume
+        else:
+            sl = price - mt.symbol_info(self.symbol).point * direction_multiplier * sl * profit_multiplier / self.volume
 
         if tp is None:
             tp = price + mt.symbol_info(self.symbol).point * direction_multiplier * self.ref_profit * profit_multiplier / self.volume
-        
+        else: 
+            tp = price + mt.symbol_info(self.symbol).point * direction_multiplier * tp * profit_multiplier / self.volume
+
         if time_end is None:
             time_end = mt.ORDER_TIME_GTC
+        else:
+            time_end = time_end
 
         if self.type_filling is None:
             self.type_filling = mt.ORDER_FILLING_FOK
-        
         
         request = {
             "action": self.action,
@@ -491,5 +496,104 @@ class positions_sender:
         if result.retcode != mt.TRADE_RETCODE_DONE:
             print("order_send failed, retcode={}".format(result.retcode))
                 
+
+        # Buy stop/ limit
+
+        # symbol = 'BTCUSDm'
+
+        # action = mt.TRADE_ACTION_PENDING
+        # volume = 0.03
+        # type = mt.ORDER_TYPE_SELL_LIMIT
+        # deviation = 20
+        # comment = 'python script open'
+        # time_end = mt.ORDER_TIME_GTC # mt.ORDER_TIME_DAY
+        # type_filling = mt.ORDER_FILLING_FOK
+
+        # price = get_market_price(symbol, type) + 2000
+            
+        # sl = None
+        # tp = None
+        
+
+        # Partial close
+
+        # close position
+        # positions = mt.positions_get()
+        # print('open positions', positions)
+
+        # # Working with 1st position in the list and closing it
+        # pos1 = positions[0]
+
+                
+        # def reverse_type(type):
+        #     # to close a buy positions, you must perform a sell position and vice versa
+        #     if type == mt.ORDER_TYPE_BUY:
+        #         return mt.ORDER_TYPE_SELL
+        #     elif type == mt.ORDER_TYPE_SELL:
+        #         return mt.ORDER_TYPE_BUY
+
+
+        # def get_close_price(symbol, type):
+        #     if type == mt.ORDER_TYPE_BUY:
+        #         return mt.symbol_info(symbol).bid
+        #     elif type == mt.ORDER_TYPE_SELL:
+        #         return mt.symbol_info(symbol).ask
+
+        # request = {
+        #     "action": mt.TRADE_ACTION_DEAL,
+        #     "position": pos1.ticket,
+        #     "symbol": pos1.symbol,
+        #     "volume": 0.02,
+        #     "type": reverse_type(pos1.type),
+        #     "price":get_close_price(pos1.symbol, pos1.type),
+        #     "deviation": 20,
+        #     "magic": 0,
+        #     "comment": "python close order",
+        #     "time_end": mt.ORDER_TIME_GTC,
+        #     "type_filling": mt.ORDER_FILLING_IOC,  # some brokers accept mt.ORDER_FILLING_FOK only
+        # }
+
+        # result = mt.order_send(request)
+        # result
+
+
         return(result)
+
+
+def update_data(asset, time_frame):
+    
+    if time_frame == '1M':
+        time_dummy = timedelta(minutes = 1)
+        time_var = mt.TIMEFRAME_M1
+    elif time_frame == '15M':
+        time_dummy = timedelta(minutes = 15)
+        time_var = mt.TIMEFRAME_M15
+    elif time_frame == 'H4':
+        time_dummy = timedelta(hours = 4)
+        time_var = mt.TIMEFRAME_H4
+    elif time_frame == 'D1':
+        time_dummy = timedelta(days = 1)
+        time_var = mt.TIMEFRAME_D1
+    
+    ohlc = pd.read_pickle(f'D:/Intraday_trading/Live_trading/data/{asset}_ohlc_{time_frame}.pkl')
+    ohlc = ohlc[ohlc['flag_candle_end'] == 1]
+
+    # Compute now date
+    from_date = ohlc['time'].max()
+    to_date = datetime.now()
+
+    rates = mt.copy_rates_range("XAUUSDm", time_var, from_date, to_date)
+    df_rates = pd.DataFrame(rates)
+
+    df_rates["time"] = pd.to_datetime(df_rates["time"], unit="s")
+
+    df_rates['flag_candle_end'] = df_rates['time'] + timedelta(hours = 7) + time_dummy
+    df_rates['flag_candle_end'] = df_rates['flag_candle_end'].apply(lambda x: 1 if x < datetime.now() else 0)
+
+    ohlc = pd.concat([ohlc, df_rates], axis = 0, ignore_index = True)
+    ohlc = ohlc.drop_duplicates(subset='time', keep='last')
+    
+    ohlc.to_pickle(f'D:/Intraday_trading/Live_trading/data/{asset}_ohlc_{time_frame}.pkl')
+
+
 
