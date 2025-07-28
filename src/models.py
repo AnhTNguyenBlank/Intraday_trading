@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 
 from src.support import *
 from src.models_support import *
+from src.trade_support import *
 
 import tensorflow as tf
 import tensorflow_hub as hub
@@ -71,6 +72,26 @@ class RSI_strat(Base_Alpha):
             return pd.Series([-1, self.base_SL, self.base_TP], index=['SIGNAL', 'SL', 'TP']) # Sell signal
         else:
             return pd.Series([0, 0, 0], index=['SIGNAL', 'SL', 'TP']) # No action (neutral)
+        
+    def _live_processor(self, asset, time_frame):
+        update_data(asset = asset, time_frame = time_frame)
+        
+        raw_data = pd.read_pickle(f'D:/Intraday_trading/Live_trading/data/{asset}_ohlc_{time_frame}.pkl')
+        raw_data = raw_data[raw_data['flag_candle_end'] == 1]
+        raw_data.columns = [col.upper() for col in raw_data.columns]
+ 
+        # signal using only necessary input data, not all
+        processed_data = self.signal(raw_data.iloc[-1-self.RSI_param['INPUT_PARAM']:, :].copy())
+        
+        # return only the latest signal
+        return(processed_data.iloc[-1:, :].values)
+    
+    def live_signal(self, asset, time_frame):
+        return(self._live_processor(asset, time_frame))
+    
+
+
+
         
 
 class MCMC_strat_v1(Base_Alpha):
