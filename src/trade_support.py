@@ -30,7 +30,7 @@ from datetime import datetime, timedelta, timezone
 from tqdm import tqdm
 import contextlib
 import os
-
+import json
 
 
 from src.support import *
@@ -556,6 +556,53 @@ class positions_sender:
         # result = mt.order_send(request)
         # result
 
+        if result.retcode != mt.TRADE_RETCODE_DONE:
+            status = 'FAILED'
+        else:
+            status = 'SUCCEED'
+
+        log_entry = {
+            "time_send_order": datetime.now().strftime("%Y-%m-%d-%H:%M:%S"),
+            "retcode": result.retcode,
+            "deal": result.deal,
+            "order": result.order,
+            "volume": result.volume,
+            "price": result.price,
+            "bid": result.bid,
+            "ask": result.ask,
+            "request_id": result.request_id,
+            "retcode_external": result.retcode_external,
+            "status": status,
+            "comment": result.comment,
+            
+            # Flatten request content
+            "request": {
+                "symbol": result.request.symbol,
+                "volume": result.request.volume,
+                "price": result.request.price,
+                "sl": result.request.sl,
+                "tp": result.request.tp,
+                "type": result.request.type,
+                "action": result.request.action,
+                "deviation": result.request.deviation,
+                "comment": result.request.comment,
+                "magic": result.request.magic,
+                "type_filling": result.request.type_filling,
+                "type_time": result.request.type_time,
+                "expiration": result.request.expiration
+            }
+        }
+
+        dt_obj = datetime.strptime(log_entry['time_send_order'], "%Y-%m-%d-%H:%M:%S")
+        # Format it however you want
+        formatted = dt_obj.strftime("%Y_%m_%d")
+
+        with open(f"D:/Intraday_trading/Live_trading/logs/deal_logs_{formatted}.jsonl", "a") as f:
+            f.write(json.dumps(log_entry) + "\n")
+
+        # with open(f"D:/Intraday_trading/Live_trading/logs/deal_logs_{formatted}.jsonl", "r") as f:
+        #     logs = [json.loads(line) for line in f]
+
 
         return(result)
 
@@ -582,7 +629,7 @@ def update_data(asset, time_frame):
     from_date = ohlc['time'].max()
     to_date = datetime.now()
 
-    rates = mt.copy_rates_range("XAUUSDm", time_var, from_date, to_date)
+    rates = mt.copy_rates_range(f"{asset}m", time_var, from_date, to_date)
     df_rates = pd.DataFrame(rates)
 
     df_rates["time"] = pd.to_datetime(df_rates["time"], unit="s")
